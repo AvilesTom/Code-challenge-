@@ -1,0 +1,50 @@
+name: Add "new issue" label to new issues
+
+on:
+  issues:
+    types: [opened]  # Solo cuando se crea una issue nueva
+
+jobs:
+  add-label:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write  # Necesario para poder añadir etiquetas
+
+    steps:
+      - name: Add "new issue" label (create if needed)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labelName = 'new issue';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Comprobar si la etiqueta existe
+            try {
+              await github.rest.issues.getLabel({
+                owner,
+                repo,
+                name: labelName,
+              });
+            } catch (error) {
+              // Si no existe (404), la creamos
+              if (error.status === 404) {
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: labelName,
+                  color: 'ededed', // puedes cambiar el color
+                });
+              } else {
+                throw error;
+              }
+            }
+
+            // Añadir la etiqueta a la issue recién creada
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: context.issue.number,
+              labels: [labelName],
+            });
